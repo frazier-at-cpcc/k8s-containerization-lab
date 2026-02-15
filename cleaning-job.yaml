@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: trip-cleaning-batch
+spec:
+  parallelism: 3
+  completions: 3
+  completionMode: Indexed
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: cleaner
+          image: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/trip-cleaner:latest
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              IDX="${JOB_COMPLETION_INDEX:-0}"
+              MONTH=$(printf "%02d" $((IDX + 1)))
+              python clean_trips.py \
+                --input s3://dsba6190-yourname-lab2/raw/month=${MONTH}/ \
+                --output s3://dsba6190-yourname-lab2/cleaned/month=${MONTH}/cleaned.parquet
+          env:
+            - name: JOB_COMPLETION_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['batch.kubernetes.io/job-completion-index']
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
