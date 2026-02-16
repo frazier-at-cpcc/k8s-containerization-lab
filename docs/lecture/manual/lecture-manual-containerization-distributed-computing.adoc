@@ -1,0 +1,322 @@
+= Lecture Manual: Applications of Containerization and Distributed Computing in Data Analytics
+:author: DSBA 6190 Instruction Team
+:revdate: 2026-02-15
+:doctype: book
+:toc: left
+:toclevels: 3
+:sectnums:
+:source-highlighter: rouge
+
+[abstract]
+This manual defines an application-centered 3-hour lecture for Cloud Computing for Data Analytics. The emphasis is on architectural decision-making for analytics outcomes, not procedural lab execution. The course uses AWS and Google Cloud as teaching platforms.
+
+== Instructional Intent
+
+=== Lecture Purpose
+Students should leave with a clear ability to choose and justify containerization and distributed computing patterns for analytics workloads.
+
+=== What This Lecture Is
+* A design and reasoning session grounded in real analytics scenarios.
+* A workload-to-architecture decision workshop.
+* A cross-cloud translation exercise (AWS and Google Cloud).
+
+=== What This Lecture Is Not
+* A command-by-command lab walkthrough.
+* A vendor feature memorization exercise.
+* A "one tool fits all" narrative.
+
+== Learning Outcomes
+
+By the end of lecture, students can:
+
+1. Identify where containerization creates high leverage in analytics pipelines.
+2. Choose distributed compute patterns based on workload shape, scale, and SLA.
+3. Explain tradeoffs among speed, cost, governance, and reliability.
+4. Map architecture intent between AWS and Google Cloud platforms.
+5. Defend design choices for batch, streaming, and ML-oriented analytics use cases.
+
+== Audience and Prerequisites
+
+=== Audience
+* Graduate data analytics students.
+* Students familiar with Python and SQL fundamentals.
+
+=== Prerequisites
+* Basic understanding of file formats (CSV vs Parquet).
+* Basic understanding of object storage and cloud IAM.
+* Introductory awareness of Kubernetes and Spark concepts.
+
+== Cross-Cloud Service Mapping by Function
+
+[cols="2,2,2",options="header"]
+|===
+| Function | AWS | Google Cloud
+| Object storage for data lake zones | S3 | Cloud Storage
+| Container image registry | ECR | Artifact Registry
+| Containerized batch orchestration | EKS Jobs (or ECS tasks) | GKE Jobs (or Cloud Run Jobs)
+| Distributed transformation engine | EMR Spark | Dataproc Spark
+| SQL analytics serving layer | Athena + Glue Catalog | BigQuery
+|===
+
+Teaching rule: always teach the function first, then service mapping.
+
+== Pedagogical Model (3 Hours)
+
+=== Time Allocation
+[cols="1,3,2",options="header"]
+|===
+| Time | Segment | Method
+| 0:00-0:20 | Problem framing and workload taxonomy | Lecture + discussion
+| 0:20-0:50 | Containerization applied to analytics | Lecture + short artifact review
+| 0:50-1:05 | Distributed computing principles and limits | Lecture + Q&A
+| 1:05-1:15 | Break | Pause
+| 1:15-1:55 | Case Study A: Batch analytics platform | Case-based teaching
+| 1:55-2:25 | Case Study B: Near-real-time analytics | Case-based teaching
+| 2:25-2:45 | Reliability, governance, and cost patterns | Applied framework
+| 2:45-2:58 | Team design studio | Active learning
+| 2:58-3:00 | Exit ticket | Assessment
+|===
+
+== Pre-Class Preparation
+
+=== Instructor Preparation Checklist
+* Prepare one architecture slide per case study.
+* Prepare one decision matrix handout (workload -> compute pattern).
+* Validate cloud accounts and permissions for optional examples.
+* Prepare fallback screenshots if cloud resources are delayed.
+
+=== Class Materials
+* Slide deck (Quarto reveal.js).
+* Scenario cards for design studio.
+* One-page decision rubric.
+* Exit ticket prompts.
+
+== Detailed Instructor Guide
+
+=== Segment 1 (0:00-0:20): Problem Framing and Workload Taxonomy
+
+==== Goal
+Establish that infrastructure choices are driven by analytics outcomes.
+
+==== Instructor Talk Track
+* "Our objective is not to run tools. Our objective is to deliver trustworthy analytics under constraints."
+* "Containerization and distributed computing are architecture levers, not end goals."
+* "Different analytics workloads need different execution patterns."
+
+==== Key Concepts
+* Workload classes: batch ETL, interactive BI, streaming metrics, ML feature generation.
+* Decision axes: data size, freshness SLA, transformation complexity, failure tolerance.
+
+==== Discussion Questions
+1. Why does a single VM script fail as data and team scale increase?
+2. What makes one workload a poor fit for distributed compute?
+
+==== Board Artifact
+Draw a 2x2: data size (low/high) vs freshness SLA (relaxed/strict), and place workload examples.
+
+=== Segment 2 (0:20-0:50): Containerization Applied to Analytics
+
+==== Goal
+Move students from "Docker basics" to "container contracts for data trust and reproducibility."
+
+==== Key Teaching Points
+* Containers standardize runtime and dependency behavior.
+* Good analytics containers define strict input/output contracts.
+* Idempotency and observability matter as much as successful process exit.
+
+==== Applied Examples
+* Daily ingestion cleaner with schema normalization.
+* Reusable feature transform container for multiple model teams.
+* Scheduled scoring container for operational dashboards.
+
+==== Anti-Patterns to Call Out
+* Overloaded monolithic container images.
+* Hardcoded bucket paths and secrets in images.
+* Mutable image tags in production pipelines.
+
+==== Check-for-Understanding
+Ask students to name one contract field that prevents downstream breakage.
+
+=== Segment 3 (0:50-1:05): Distributed Computing Principles and Limits
+
+==== Goal
+Clarify when distributed systems are justified and when they are unnecessary overhead.
+
+==== Key Teaching Points
+* Distributed compute helps with heavy joins, large scans, and strict batch windows.
+* It adds complexity for tiny or simple workloads.
+* Orchestration reliability is not the same as data correctness.
+
+==== Quick Comparison
+* Serverless SQL for curated ad-hoc analytics.
+* Spark cluster for heavy transformations and custom logic.
+* Kubernetes Jobs for partition-parallel independent tasks.
+
+=== Break (1:05-1:15)
+
+=== Segment 4 (1:15-1:55): Case Study A - Batch Analytics Platform
+
+==== Business Context
+City mobility analytics team needs daily demand, fare, and zone-level performance insights by 7:00 AM.
+
+==== Architecture Pattern
+1. Raw data in object storage.
+2. Containerized cleaning jobs by partition.
+3. Distributed Spark aggregations.
+4. Serverless SQL access for analysts.
+
+==== Why This Pattern Works
+* Cleaning logic is reproducible and retryable by partition.
+* Spark handles high-cardinality aggregation efficiently.
+* SQL serving layer supports analyst velocity without cluster management.
+
+==== Metrics to Evaluate
+* End-to-end pipeline completion time.
+* Percentage of valid records after cleaning.
+* Query scan volume and runtime in serving layer.
+
+==== Instructor Prompt
+"If one partition fails at 5:30 AM, what reruns and what must remain untouched?"
+
+=== Segment 5 (1:55-2:25): Case Study B - Near-Real-Time Analytics
+
+==== Business Context
+Fraud operations team needs alerts within two minutes of event arrival.
+
+==== Architecture Pattern
+* Streaming ingestion and real-time processing for immediate detection.
+* Containerized scoring service for flexible deployment.
+* Batch backfill for reconciliation, model retraining, and compliance reporting.
+
+==== Key Insight
+A single batch pipeline cannot satisfy low-latency alerting requirements.
+
+==== Tradeoff Discussion
+* Latency vs operational complexity.
+* Stateful processing overhead.
+* Cost control for always-on streaming systems.
+
+==== Instructor Prompt
+"Which components must be always-on, and which can stay ephemeral?"
+
+=== Segment 6 (2:25-2:45): Reliability, Governance, and Cost
+
+==== Reliability Controls
+* Partition-level retries.
+* Data quality gates at stage boundaries.
+* Freshness and anomaly monitoring.
+* Lineage metadata for downstream trust.
+
+==== Governance Controls
+* Least-privilege IAM for jobs and query engines.
+* Encryption in transit and at rest.
+* Managed secret injection, never image-embedded credentials.
+* Audit logging for data access and query activity.
+
+==== Cost Controls
+* Use ephemeral clusters when possible.
+* Partition data to reduce query scans.
+* Avoid recomputing unchanged partitions.
+* Match workload class to compute model.
+
+=== Segment 7 (2:45-2:58): Design Studio
+
+==== Activity Prompt
+A logistics company needs:
+
+* Daily route optimization reports by 6:00 AM.
+* Interactive operations dashboards all day.
+* Weekly feature pipelines for demand forecasting.
+
+Teams propose an architecture using AWS or Google Cloud.
+
+==== Required Student Output
+1. Four pipeline stages with clear purpose.
+2. One compute pattern per stage and justification.
+3. Two reliability controls.
+4. Two cost controls.
+5. One governance control.
+
+==== Facilitation Rubric (10 points)
+[cols="3,1,6",options="header"]
+|===
+| Dimension | Points | What Good Looks Like
+| Workload fit | 3 | Compute choices align with data size and latency requirements
+| Reliability | 2 | Clear retry/failure isolation and freshness checks
+| Cost reasoning | 2 | Concrete scan/compute reduction strategy
+| Governance | 2 | IAM and credential strategy is explicit
+| Cross-cloud clarity | 1 | Architecture intent maps cleanly between AWS and GCP
+|===
+
+=== Segment 8 (2:58-3:00): Exit Ticket
+
+==== Prompt
+1. Where is containerization highest leverage in analytics pipelines?
+2. Name one workload where distributed compute is unnecessary.
+3. State one architecture choice and one cost implication.
+
+== Assessment Strategy
+
+=== In-Class Formative Checks
+* Polls at transitions.
+* Cold-call scenario questions.
+* One-minute written reasoning checks.
+
+=== Post-Class Summative Option
+Short memo (1-2 pages):
+
+* Choose one analytics scenario.
+* Propose architecture on AWS and on Google Cloud.
+* Justify performance, cost, and governance choices.
+
+== Optional Lab Anchor (Use Sparingly)
+
+Use the course lab only as evidence for concepts:
+
+* `src/clean_trips.py` + `infra/docker/Dockerfile`: containerized data quality contract.
+* `infra/k8s/cleaning-job.yaml`: partition-parallel orchestration pattern.
+* `src/spark_aggregations.py`: distributed transformation logic.
+* `infra/sql/athena_ddl.sql`: analytics serving layer behavior.
+
+Instructional note: avoid spending lecture time on step-by-step command execution unless students request implementation details.
+
+== Common Misconceptions and Corrections
+
+* Misconception: "Kubernetes replaces Spark."
+* Correction: Kubernetes orchestrates container workloads; Spark provides distributed data processing abstractions.
+
+* Misconception: "If the job exits 0, the data is trustworthy."
+* Correction: correctness requires schema, quality checks, and lineage validation.
+
+* Misconception: "Serverless SQL and Spark are interchangeable."
+* Correction: they solve different workload classes and cost profiles.
+
+== Appendix A: Architecture Decision Card (Handout)
+
+For each stage, students must answer:
+
+1. What is the analytic objective of this stage?
+2. What is the input and output data contract?
+3. What compute pattern fits and why?
+4. How will failures be isolated and retried?
+5. How is cost controlled?
+6. What governance controls apply?
+
+== Appendix B: Instructor Delivery Checklist
+
+Before class:
+
+* Deck updated and tested.
+* Scenario cards printed or posted.
+* Timing cues visible.
+
+During class:
+
+* Keep architecture intent first.
+* Redirect tool-specific rabbit holes to lab sections.
+* Enforce tradeoff justification in student responses.
+
+After class:
+
+* Collect exit tickets.
+* Identify weak areas for next session reinforcement.

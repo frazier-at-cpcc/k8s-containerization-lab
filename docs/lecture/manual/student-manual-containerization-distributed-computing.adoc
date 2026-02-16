@@ -1,0 +1,272 @@
+= Student Manual: Containerization and Distributed Computing for Data Analytics
+:author: DSBA 6190
+:revdate: 2026-02-15
+:doctype: book
+:toc: left
+:toclevels: 3
+:sectnums:
+:source-highlighter: rouge
+
+[abstract]
+This manual supports the 3-hour application-centered lecture on containerization and distributed computing in analytics. It focuses on how to choose and justify architecture patterns for real workloads using AWS and Google Cloud.
+
+== How to Use This Manual
+
+Use this document in three phases:
+
+1. Before class: review key terms and workload taxonomy.
+2. During class: complete case study prompts and design worksheets.
+3. After class: use the decision checklist to study and prepare assignments.
+
+== Learning Goals
+
+By the end of this lecture, you should be able to:
+
+1. Explain where containerization creates the most value in analytics pipelines.
+2. Decide when distributed compute is necessary and when it is avoidable overhead.
+3. Compare architecture options using performance, cost, reliability, and governance criteria.
+4. Translate architecture intent between AWS and Google Cloud.
+5. Defend your design choices in scenario-based discussions.
+
+== Session Roadmap (180 Minutes)
+
+[cols="1,3",options="header"]
+|===
+| Time | Topic
+| 0:00-0:20 | Problem framing and workload taxonomy
+| 0:20-0:50 | Containerization applied to analytics
+| 0:50-1:05 | Distributed computing principles and limits
+| 1:05-1:15 | Break
+| 1:15-1:55 | Case Study A: Batch analytics platform
+| 1:55-2:25 | Case Study B: Near-real-time analytics
+| 2:25-2:45 | Cost, reliability, and governance
+| 2:45-2:58 | Design studio
+| 2:58-3:00 | Exit ticket
+|===
+
+== Quick Vocabulary
+
+* Container image: packaged runtime with code and dependencies.
+* Orchestration: scheduling and managing container execution at scale.
+* Distributed compute: parallel execution across multiple machines.
+* Partitioning: organizing data into logical segments (for example by date).
+* Partition pruning: scanning only relevant partitions in SQL queries.
+* Idempotency: rerunning a job does not create incorrect duplicate side effects.
+* Data contract: explicit expectations for input/output schema and behavior.
+
+== Workload Taxonomy for Analytics
+
+[cols="2,2,3,3",options="header"]
+|===
+| Workload | Freshness Need | Typical Data Pattern | Preferred Compute Pattern
+| Batch ETL | Hourly to daily | Large append-only files | Distributed batch (Spark/SQL jobs)
+| Interactive BI | Seconds | Curated analytic tables | Serverless SQL
+| Streaming alerts | Seconds to sub-minute | Event streams | Stateful stream processing
+| ML feature engineering | Daily to weekly | Wide joins and windows | Distributed compute
+| Scheduled scoring | Minutes | Repeated model inference tasks | Autoscaled containers
+|===
+
+== Core Idea: Tools Serve Analytics Outcomes
+
+Containerization and distributed computing are useful only when they improve outcomes such as:
+
+* Faster time-to-insight
+* More reliable refresh cycles
+* Lower cost per useful query or report
+* Higher trust in data quality and reproducibility
+
+If a tool increases complexity without improving these outcomes, it is probably the wrong tool for that stage.
+
+== Where Containerization Helps Most
+
+Containerization usually provides strong value when:
+
+* Many people run the same job in different environments.
+* Python/R dependencies are fragile or frequently drift.
+* You need predictable retries for partitioned jobs.
+* You need consistent CLI contracts across local and cloud runtimes.
+
+Containerization alone does not solve:
+
+* Poor data quality logic
+* Missing monitoring
+* Weak IAM configuration
+* Bad storage layout
+
+== Where Distributed Compute Helps Most
+
+Distributed compute is justified when:
+
+* Data volume is too large for a single node with acceptable runtime.
+* Jobs require heavy joins, windows, or aggregations.
+* You must meet strict batch windows.
+
+Distributed compute may be unnecessary when:
+
+* Data is small and transformations are simple.
+* Team cannot support operational complexity.
+* Latency requirements are better served by serverless SQL over curated tables.
+
+== AWS and Google Cloud Mapping by Function
+
+[cols="2,2,2",options="header"]
+|===
+| Function | AWS | Google Cloud
+| Object storage | S3 | Cloud Storage
+| Container image registry | ECR | Artifact Registry
+| Containerized batch orchestration | EKS Jobs | GKE Jobs
+| Distributed transformations | EMR Spark | Dataproc Spark
+| SQL analytics layer | Athena + Glue Catalog | BigQuery
+|===
+
+Study tip: memorize the architecture function first, then map to provider service names.
+
+== Architecture Decision Checklist
+
+For each pipeline stage, answer these questions:
+
+1. What analytics question does this stage support?
+2. What are the input and output data contracts?
+3. How much data must be processed, and how often?
+4. What freshness SLA must be met?
+5. What failure should be isolated, and how should retries work?
+6. What is the cost control strategy?
+7. What governance controls are required?
+
+If you cannot answer all seven, the design is incomplete.
+
+== Case Study A Worksheet: Batch Mobility Analytics
+
+=== Scenario
+An operations team needs daily zone-level trip and revenue insights by 7:00 AM.
+
+=== Your Task
+Propose a 4-stage architecture:
+
+1. Ingestion and storage
+2. Cleaning
+3. Aggregation
+4. Serving layer
+
+=== Fill-In Prompts
+* Stage 1 objective:
+* Stage 1 compute pattern:
+* Stage 2 objective:
+* Stage 2 compute pattern:
+* Stage 3 objective:
+* Stage 3 compute pattern:
+* Stage 4 objective:
+* Stage 4 compute pattern:
+
+=== Reliability Prompt
+If one date partition fails at 5:30 AM, what reruns and what remains unchanged?
+
+=== Cost Prompt
+How do you reduce query scan cost in the serving layer?
+
+== Case Study B Worksheet: Near-Real-Time Fraud Analytics
+
+=== Scenario
+A fraud team needs alert generation within 2 minutes of event arrival and also needs daily compliance reporting.
+
+=== Your Task
+Design a hybrid architecture with both near-real-time and batch components.
+
+=== Fill-In Prompts
+* Real-time path components:
+* Batch reconciliation components:
+* Where containers are used:
+* Where distributed compute is used:
+* What remains serverless:
+
+=== Tradeoff Prompt
+What additional operational complexity appears when moving from batch-only to hybrid architecture?
+
+== In-Class Design Studio Guide
+
+=== Group Activity
+Design a pipeline for a logistics company that needs:
+
+* 6:00 AM daily optimization reports
+* Interactive operational dashboards
+* Weekly ML feature pipelines
+
+=== Required Deliverables
+1. One architecture diagram (4 to 6 stages).
+2. Compute pattern per stage with one-sentence justification.
+3. Two reliability controls.
+4. Two cost controls.
+5. One governance control.
+
+=== Presentation Standard
+Your design must show clear workload-to-tool fit. Avoid naming tools without explaining why they are appropriate.
+
+== Reliability, Governance, and Cost Cheat Sheet
+
+=== Reliability
+* Use partition-level retries instead of whole-pipeline reruns.
+* Add quality checks at stage boundaries.
+* Track freshness SLAs explicitly.
+* Monitor for anomalies in output volume and key metrics.
+
+=== Governance
+* Use least-privilege roles for each job stage.
+* Keep secrets out of images and code.
+* Enforce encryption at rest and in transit.
+* Keep audit logs for dataset and query access.
+
+=== Cost
+* Prefer ephemeral compute for intermittent workloads.
+* Partition data based on common query filters.
+* Avoid recomputing unchanged partitions.
+* Match compute model to workload class.
+
+== Lab Anchor (Optional Review)
+
+These course files are examples of concepts from lecture:
+
+* `src/clean_trips.py` and `infra/docker/Dockerfile`: containerized data quality contract
+* `infra/k8s/cleaning-job.yaml`: partition-parallel orchestration pattern
+* `src/spark_aggregations.py`: distributed aggregation pattern
+* `infra/sql/athena_ddl.sql`: analytics serving pattern
+
+Remember: these artifacts are examples, not universal templates.
+
+== Self-Assessment (Post-Lecture)
+
+Rate yourself from 1 (not confident) to 5 (very confident):
+
+* I can distinguish when distributed compute is necessary.
+* I can explain idempotency in data pipelines.
+* I can design partitioning for query performance.
+* I can map AWS design intent to Google Cloud services.
+* I can justify architecture tradeoffs using cost and reliability arguments.
+
+If any score is 3 or below, revisit the decision checklist and case worksheets.
+
+== Exit Ticket Template
+
+1. Where is containerization highest leverage in analytics pipelines?
+2. Name one case where distributed compute is unnecessary.
+3. State one architecture choice and one cost implication.
+
+== Study Plan for Next 7 Days
+
+1. Rework one case study with a different workload and SLA.
+2. Recreate the architecture on the opposite cloud provider.
+3. Write a one-page rationale that explains performance, cost, and governance tradeoffs.
+4. Review peer designs and identify one improvement for reliability.
+
+== Appendix: One-Page Architecture Note Template
+
+Use this structure for assignments and exam prep:
+
+* Problem statement:
+* Workload type and SLA:
+* Stage-by-stage architecture:
+* Tool choices and reasons:
+* Reliability controls:
+* Cost controls:
+* Governance controls:
+* Risks and mitigations:
+* Expected outcomes and metrics:

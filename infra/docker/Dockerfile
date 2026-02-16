@@ -4,6 +4,6 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir pandas pyarrow boto3
 
-COPY clean_trips.py ./
+COPY src/clean_trips.py ./
 
 ENTRYPOINT ["python", "clean_trips.py"]

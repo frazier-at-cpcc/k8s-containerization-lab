@@ -1,18 +1,50 @@
-# DSBA 6190 Lab 2 Support Files
+# DSBA 6190 Lab 2 Repository
 
-This repository contains the support files for **AWS Lab 2: Distributed Computing for Data Processing**.
+This repository contains support materials for **AWS Lab 2: Distributed Computing for Data Processing**, plus lecture artifacts and validation tooling.
 
-## Included Files
+## Repository Layout
 
-- `clean_trips.py`: Python cleaning pipeline (CSV -> Parquet) with local + S3 support.
-- `Dockerfile`: Container image definition for `clean_trips.py`.
-- `sample_trips.csv`: Small test input for Part 1 local container validation.
-- `trips_2023_01.csv`, `trips_2023_02.csv`, `trips_2023_03.csv`: Monthly raw partitions for Parts 2-3.
-- `cleaning-job.yaml`: EKS Indexed Job to run three parallel cleaning pods.
-- `spark_aggregations.py`: EMR Spark script to produce hourly and daily aggregated outputs.
-- `zone_lookup.csv`: Zone ID -> zone name lookup table used by Spark job.
-- `athena_ddl.sql`: Athena/Glue DDL + analysis queries for Part 4.
-- `lab2-distributed-computing.pdf`: Official lab guide.
+```text
+.
+├── src/
+│   ├── clean_trips.py
+│   └── spark_aggregations.py
+├── infra/
+│   ├── docker/Dockerfile
+│   ├── k8s/cleaning-job.yaml
+│   └── sql/athena_ddl.sql
+├── data/
+│   ├── sample/sample_trips.csv
+│   ├── raw/trips_2023_01.csv
+│   ├── raw/trips_2023_02.csv
+│   ├── raw/trips_2023_03.csv
+│   └── reference/zone_lookup.csv
+├── docs/
+│   ├── lab/lab2-distributed-computing.pdf
+│   ├── lecture/
+│   └── slides/
+├── diagrams/aws/
+├── notebooks/
+└── tests/
+```
+
+## Core Assets
+
+- `src/clean_trips.py`: containerized cleaning pipeline (CSV -> Parquet), local + S3.
+- `infra/docker/Dockerfile`: image definition for the cleaning pipeline.
+- `infra/k8s/cleaning-job.yaml`: EKS indexed batch job for partition-parallel cleaning.
+- `src/spark_aggregations.py`: EMR Spark aggregations for hourly + daily outputs.
+- `infra/sql/athena_ddl.sql`: Athena/Glue DDL and query patterns.
+- `docs/lab/lab2-distributed-computing.pdf`: official lab guide.
+
+Recommended S3 upload mapping for the lab:
+
+- `src/clean_trips.py` -> `s3://<BUCKET>/clean_trips.py`
+- `infra/docker/Dockerfile` -> `s3://<BUCKET>/Dockerfile`
+- `data/sample/sample_trips.csv` -> `s3://<BUCKET>/sample_trips.csv`
+- `src/spark_aggregations.py` -> `s3://<BUCKET>/scripts/spark_aggregations.py`
+- `data/reference/zone_lookup.csv` -> `s3://<BUCKET>/reference/zone_lookup.csv`
+- `data/raw/trips_2023_*.csv` -> `s3://<BUCKET>/raw/month=MM/`
 
 ## Data Schema Used Across Scripts
 
@@ -32,17 +64,17 @@ Spark outputs:
 
 ## Part 1: Container Build and ECR Push
 
-1. Upload all files to your S3 bucket (`dsba6190-yourname-lab2`) as described in the lab PDF.
+1. Upload files to your S3 bucket (`dsba6190-yourname-lab2`) as described in the lab PDF.
 2. On the EC2 Docker build instance:
 
 ```bash
 mkdir ~/lab2 && cd ~/lab2
-aws s3 cp s3://<BUCKET>/clean_trips.py .
-aws s3 cp s3://<BUCKET>/sample_trips.csv .
-# Create Dockerfile from this repo's Dockerfile content
-# (or upload Dockerfile to S3 first and copy it here).
+mkdir -p src infra/docker
+aws s3 cp s3://<BUCKET>/clean_trips.py src/clean_trips.py
+aws s3 cp s3://<BUCKET>/Dockerfile infra/docker/Dockerfile
+aws s3 cp s3://<BUCKET>/sample_trips.csv sample_trips.csv
 
-docker build -t trip-cleaner:latest .
+docker build -f infra/docker/Dockerfile -t trip-cleaner:latest .
 docker run --rm -v ~/lab2:/data trip-cleaner:latest \
   --input /data/sample_trips.csv \
   --output /data/cleaned_sample.parquet
@@ -64,13 +96,13 @@ docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/trip-cleaner:latest
 ## Part 2: EKS Batch Cleaning
 
 1. Create EKS cluster with `eksctl` per lab instructions.
-2. Update these placeholders in `cleaning-job.yaml`:
+2. Update placeholders in `infra/k8s/cleaning-job.yaml`:
    - `image: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/trip-cleaner:latest`
    - `s3://dsba6190-yourname-lab2/...` paths
 3. Submit and monitor:
 
 ```bash
-kubectl apply -f cleaning-job.yaml
+kubectl apply -f infra/k8s/cleaning-job.yaml
 kubectl get jobs --watch
 kubectl get pods
 kubectl logs <pod-name>
@@ -101,22 +133,25 @@ aws s3 ls s3://<BUCKET>/aggregated/daily_summary/
 
 ## Part 4: Athena/Glue Query Layer
 
-Use `athena_ddl.sql` after replacing bucket names. It includes:
+Use `infra/sql/athena_ddl.sql` after replacing bucket names.
 
-- `CREATE DATABASE lab2_analytics`
-- External table DDL for `hourly_trips`
-- External partitioned table DDL for `daily_summary`
-- `MSCK REPAIR TABLE`
-- Query A/B/C from the lab write-up
-
-## Important Lab Constraints
+## Lab Constraints
 
 - Keep total running instances within Learner Lab limits.
-- EKS must use the required Learner Lab IAM role settings from the lab guide.
+- EKS must use required Learner Lab IAM roles from the lab guide.
 - EMR clusters do not survive session end; always write outputs to S3 and terminate explicitly.
-- Athena requires query results location set (for example `s3://<BUCKET>/athena-results/`).
+- Athena requires query results location (for example `s3://<BUCKET>/athena-results/`).
+
+## Validation Commands
+
+```bash
+python3 tests/run_tests.py
+python3 tests/run_tests.py --docker
+python3 tests/run_tests.py --aws
+python3 tests/validate_aws_cleanup.py --region us-west-2 --bucket <your-bucket>
+```
 
 ## Notes
 
-- `clean_trips.py` depends on `pandas`, `pyarrow`, and `boto3` (installed by the Dockerfile).
-- For reproducible execution, run the cleaner through the container image in Part 1/2.
+- `src/clean_trips.py` depends on `pandas`, `pyarrow`, and `boto3` (installed by the Docker image).
+- For reproducible execution, run cleaning through the container image for Part 1 and Part 2.
